@@ -17,6 +17,7 @@ from googletrans import Translator
 from sklearn.model_selection import train_test_split
 from tqdm import tqdm
 import nltk
+import string
 nltk.download('stopwords')
 
 def handle_missing_value(df): #Success
@@ -155,6 +156,24 @@ def find_en(df, translator):
     df['comment'] = result
     return df
 
+def remove_punctuation(text): #blm pasti
+    translator = str.maketrans('', '', string.punctuation)
+    return text.translate(translator)
+
+def main(df, translator, slang_words):
+    df = remove_at(df)
+    df = remove_hashtag(df)
+    df = remove_http(df)
+    # df['comment'] = df['comment'].apply(remove_punctuation)
+    df = remove_duplicate_comment(df)
+    df = handle_missing_value(df)
+    df = change_slang_words(df,slang_words)
+    df = find_en(df,translator)
+    df['comment'].map(translate_emoji)
+    df['comment'] = df['comment'].replace(r'\s+', ' ', regex=True)
+    df['comment'] = df['comment'].str.lstrip()
+    return df
+
 if __name__=="__main__":
     slang_words2 = pd.read_csv('kamus_slang.csv', header=0)
     slang_words2 = slang_words2[['informal', 'formal']]
@@ -163,14 +182,19 @@ if __name__=="__main__":
     slang_words = dict(slang_words2.values)
 
     # Stopwords
-    additional_stop = ['nya','yg','ga','gk','tp','nih','noh','lah','dong','pa','yuk','gak','ya','sih','yaa','aja', 'min', 'bca','brimo','biar','kak','blu','mega','allo','bank','bca','btn']
-    all_stopwords = stopwords.words('indonesian') + additional_stop
+    # additional_stop = ['nya','yg','ga','gk','tp','nih','noh','lah','dong','pa','yuk','gak','ya','sih','yaa','aja', 'min', 'bca','brimo','biar','kak','blu','mega','allo','bank','bca','btn']
+    # all_stopwords = stopwords.words('indonesian') + additional_stop
 
     # Translator
     translator = Translator()
 
     df = pd.read_excel('scrap_ig_2023-11-20.xlsx')
-    print(df['comment'])
+    # print(df['comment'])
+    
+    clean_df = main(df, translator, slang_words)
+    clean_df.to_excel('output_file.xlsx', index=False)
+    print(clean_df)
+    
     # print(remove_at(df)['comment'])
     # print(remove_hashtag(df)['comment'])
     # print(remove_http(df)['comment'])
